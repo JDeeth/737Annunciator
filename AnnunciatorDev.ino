@@ -66,11 +66,11 @@ private:
   bool isLit_;
   bool turnOn_;
   bool ack_[MAX_ANNCS_PER_SYSTEM]; // Acknowledgement. When the reset button is
-                                   // pressed, this Acknowledges all the
-                                   // presently active sub-annunciators,
-                                   // preventing them from relighting the SA
-                                   // until they extinguish and relight or the
-                                   // recall button is pressed.
+  // pressed, this Acknowledges all the
+  // presently active sub-annunciators,
+  // preventing them from relighting the SA
+  // until they extinguish and relight or the
+  // recall button is pressed.
 };
 
 //////// SystemAnnc (bool& anncArray, int begin, int end)
@@ -154,10 +154,10 @@ void SystemAnnc::reset() {
 enum SYS_ANNC{
   FC, //Flight Controls
   IRS,
-  //FUEL,
-  //ELEC,
-  //APU,
-  //OD, // OVHT/DET
+  FUEL,
+  ELEC,
+  APU,
+  OVHT, // OVHT/DET
   //AI, // Anti-Ice
   //HYD,
   //DOOR,
@@ -167,9 +167,10 @@ enum SYS_ANNC{
   SA_COUNT
 };
 
+/////////////////////////
 // Dataref index
 //
-// The values FC1, FC2 etc, represent datarefs for overhead FLT CTRL annunciators
+// The values FLT, FLT2 etc, represent datarefs for overhead FLT CTRL annunciators
 // IRS1 etc represents IRS annunciators
 // The _MAX values do not represent an individual dataref. They are used
 // for calculating the number of datarefs in an individual category.
@@ -180,28 +181,31 @@ enum SYS_ANNC{
 //
 // To make the maths work out correctly, every entry following a _MAX entry
 // must be assigned to be equal to the _MAX entry.
-// For example, IRS1 = FC_MAX
+// For example, IRS1 = FLT_MAX
 // Be careful to keep this convention!!
 //
-enum DATAREF_INDEX{
-  FC1 = 0,  // the value which follows any _MAX value
-  FC2,      // MUST equal the preceding value!!
-  FC_MAX,
-  IRS1 = FC_MAX,
+enum SUB_ANNUNCIATOR_INDEX{
+  FLT1 = 0,  // the value which follows any _MAX value
+  FLT2,      // MUST equal the preceding value!!
+  FLT_MAX,
+  IRS1 = FLT_MAX,
+  IRS2,
   IRS_MAX,
-  DR_COUNT = IRS_MAX};
-
-////////////////////
-//
-// these are for my dataref-simulating input switches
-const int DRPin[DR_COUNT] = {0, 4, 8};
-Bounce * dr[DR_COUNT];
-//
-// Because I currently don't have a working X-Plane install,
-// I cannot test this with actual datarefs. So I'm using a
-// bunch of switches as a substitute.
-//
-////////////////////
+  FUEL1 = IRS_MAX,
+  FUEL2,
+  FUEL_MAX,
+  ELEC1 = FUEL_MAX, // You can have as many or as few datarefs in each
+  ELEC2,            // category as you choose. I've arbitrarily picked
+  ELEC3,            // two in each category and four in ELEC.
+  ELEC4,
+  ELEC_MAX,
+  APU1 = ELEC_MAX,
+  APU2,
+  APU_MAX,
+  OVHT1 = APU_MAX,
+  OVHT2,
+  OVHT_MAX,
+  SUB_COUNT = OVHT_MAX};
 
 ////////////////////
 // sub-annunciator array(s)
@@ -210,22 +214,51 @@ Bounce * dr[DR_COUNT];
 // I chose to use one long array to cover all SA sub-annunciators, so it could
 // be entirely populated using one for loop, but it would be equally
 // appropriate to use multiple short arrays, one per SA.
-// 
+//
 // Write your own code in loop() to populate this/these array/s with the state
 // of the sub-annunciators. This way you have flexibility to decide what can be
 // used as a sub-annunciator.
 //
-bool anncArray[DR_COUNT] = {0};
+bool anncArray[SUB_COUNT] = {0};
+
+FlightSimInteger dr[SUB_COUNT];
+FlightSimFloat magHeading;
+
+void setupDR() {
+  // note: the following datarefs have been selected at semi-random.
+  // It is not possible for me to check correct behaviour, or spelling
+  // as, at the time of writing, I don't have a working X-Plane installation.
+  dr[FLT1] = XPlaneRef("sim/cockpit/switches/yaw_damper_on");
+  dr[FLT2] = XPlaneRef("sim/cockpit2/annunciators/autopilot_trim_fail");
+  dr[IRS1] = XPlaneRef("sim/cockpit2/electrical/dc_voltmeter_selection2");
+  dr[IRS2] = XPlaneRef("sim/operation/failures/rel_efis_1");
+  dr[FUEL1] = XPlaneRef("sim/cockpit2/annunciators/fuel_pressure_low[0]");
+  dr[FUEL2] = XPlaneRef("sim/cockpit2/annunciators/fuel_pressure_low[1]");
+  dr[ELEC1] = XPlaneRef("sim/cockpit2/annunciators/low_voltage");
+  dr[ELEC2] = XPlaneRef("sim/cockpit2/annunciators/generator_off[0]");
+  dr[ELEC3] = XPlaneRef("sim/cockpit2/annunciators/generator_off[1]");
+  dr[ELEC4] = XPlaneRef("sim/cockpit2/annunciators/inverter_off[0]");
+  dr[APU1] = XPlaneRef("sim/cockpit2/electrical/APU_generator_on");
+  dr[APU2] = XPlaneRef("sim/operation/failures/rel_APU_press");
+  dr[OVHT1] = XPlaneRef("sim/cockpit2/annunciators/hvac");
+  dr[OVHT2] = XPlaneRef("sim/"); //dummy dataref
+  
+  magHeading = XPlaneRef("sim/cockpit2/gauges/indicators/compass_heading_deg_mag");
+  
+  return;
+}
 
 // System Annunciator array
 SystemAnnc * sa[SA_COUNT];
 
 void setupSA() {
-  sa[FC] = new SystemAnnc(anncArray[0], FC1, FC_MAX);
+  sa[FC] = new SystemAnnc(anncArray[0], FLT1, FLT_MAX);
   sa[IRS] = new SystemAnnc(anncArray[0], IRS1, IRS_MAX);
-  //sa[FUEL] = new SystemAnnc(dataref[0], FUEL1, FUEL_MAX);
+  sa[FUEL] = new SystemAnnc(anncArray[0], FUEL1, FUEL_MAX);
+  sa[ELEC] = new SystemAnnc(anncArray[0], ELEC1, ELEC_MAX);
+  sa[APU] = new SystemAnnc(anncArray[0], APU1, APU_MAX);
+  sa[OVHT] = new SystemAnnc(anncArray[0], OVHT1, OVHT_MAX);
   // etc
-  // Use Dataref[0] and values from DATAREF_INDEX for each entry!
 }
 
 // Master Caution Lit flag
@@ -245,15 +278,31 @@ Bounce * sw[SW_COUNT];
 
 ///////////////////////// LED outputs /////////////////
 enum LED_PIN{
-  LED_FC,
+  LED_FLT,
   LED_IRS,
-  // add more System Annunciator LEDs here
-  LED_SA_MAX,
-  LED_MC = LED_SA_MAX, // as before, each entry following a _MAX
-  LED_COUNT};          // must be assigned the value of the _MAX
+  LED_FUEL,
+  LED_ELEC,
+  LED_APU,
+  LED_OVHT, // OVHT/DET
+  //LED_AI, // Anti-Ice
+  //LED_HYD,
+  //LED_DOOR,
+  //LED_ENG,
+  //LED_OH, // Overhead
+  //LED_AC, // Air Conditioning
+  LED_SA_COUNT};
 
-const int LedPin[LED_COUNT] = { // LED hardware pins
-  44, 45, LED_BUILTIN };
+// SystemAnnc LED hardware pins
+const int LedPin[LED_SA_COUNT] = {
+  5, //FLT CTRL
+  7, //IRS
+  6, //FUEL
+  4, //ELEC
+  2, //APU
+  3};//OVHT
+
+// other LED pins
+const int mcPin = 0; //master caution
 
 ///////////////////////////// setup /////////////////////////
 void setup() {
@@ -261,39 +310,44 @@ void setup() {
   // can configure the System Annc array in the same
   // part of the source file as all the input stuff.
   setupSA();
-
-  // My hardware-simulated "datarefs"
-  for (int i = 0; i < DR_COUNT; ++i) {
-    dr[i] = new Bounce (DRPin[i], 5);
-    dr[i]->write(HIGH);
-    pinMode(DRPin[i], INPUT_PULLUP );
-  }
-
+  setupDR();
+  
   // switch input
   for (int i = 0; i < SW_COUNT; ++i) {
     sw[i] = new Bounce (SwPin[i], 5);
     pinMode(SwPin[i], INPUT_PULLUP );
   }
-
+  
   // LED output
-  for (int i = 0; i < LED_COUNT; ++i) {
+  for (int i = 0; i < LED_SA_COUNT; ++i) {
     pinMode(LedPin[i], OUTPUT);
   }
+  
+  pinMode(mcPin, OUTPUT);
 }
 
 ////////////////////////////////// loop ////////////////////
 void loop() {
+  FlightSim.update();
   
   /////////////////////////
-  // Assigning values to sub-annc array[]
+  // Assigning values to sub-annc array
   //
-  // Here is where anncArray is populated with the state of the 
-  // sub-annunciators. In this offline testing code, the sub-annunciator
-  // datarefs are represented by switches.
+  // Here is where anncArray is populated with the state of the
+  // sub-annunciators.
   //
-  for (int i = 0; i < DR_COUNT; ++i) {
-    dr[i]->update();
-    anncArray[i] = !(dr[i]->read());
+  for (int i = 0; i < SUB_COUNT; ++i) {
+    anncArray[i] = dr[i]; //very simple, eh?
+  }
+  
+  // Demonstration of creating virtual sub-annunciator from an arbitrary
+  // floating point dataref.
+  // If the magnetic heading is between 90 and 180, the OVHT System Annunciator
+  // will be triggered.
+  if (magHeading > 90 && magHeading < 180) {
+    dr[OVHT2] = true;
+  } else {
+    dr[OVHT2] = false;
   }
   
   ////////////////////////
@@ -301,14 +355,14 @@ void loop() {
   for (int i = 0; i < SW_COUNT; ++i) {
     sw[i]->update();
   }
-
+  
   ////////////////////////////////////
   // Update System Annunciators
   //
   for (int i = 0; i < SA_COUNT; ++i) {
     masterCautionLit += sa[i]->checkSubAnncs();
   }
-
+  
   ///////////////////////////////////
   // Input handling
   //
@@ -321,21 +375,21 @@ void loop() {
   if (sw[SW_MASTER]->risingEdge()) { // when MC is released
     masterCautionLit = false;                   // extinguish Master Caution
   }
-
+  
   // Light/extinguish Master Caution
-  digitalWrite(LedPin[LED_MC], masterCautionLit);
-
+  digitalWrite(mcPin, masterCautionLit);
+  
   if(sw[SW_SIXPACK]->risingEdge()) { //when sixpack released
     for (int i = 0; i < SA_COUNT; ++i) {
       sa[i]->recall();              // reset all acknowledgements
     }
-    for (int i = 0; i < LED_SA_MAX; ++i) {
+    for (int i = 0; i < LED_SA_COUNT; ++i) {
       digitalWrite(LedPin[i], LOW); // and extinguish all SAs.
     }                               // They will be relit next loop() if called for.
   }
-
+  
   if(sw[SW_SIXPACK]->read() == LOW) { //if sixpack is pressed
-    for (int i = 0; i < LED_SA_MAX; ++i) {
+    for (int i = 0; i < LED_SA_COUNT; ++i) {
       digitalWrite(LedPin[i], HIGH); //light all the System Annunciators
     }
   } else {                           // if sixpack not pressed
@@ -343,7 +397,7 @@ void loop() {
       digitalWrite(LedPin[i], sa[i]->isLit()); //light SAs if called for
     }
   }
-
+  
   // voila!
 }
 
