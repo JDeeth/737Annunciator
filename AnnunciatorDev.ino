@@ -20,10 +20,9 @@ enum {
   SA_COUNT
 };
 
-// "Datarefs" for individual overhead-panel annunciators
-enum { // all values after an intermediate _MAX must
-  FC1 = 0,  // equal the preceding value
-  FC2,
+enum { // index for dataref array
+  FC1 = 0,  // all values after an intermediate _MAX must
+  FC2,      // equal the preceding value
   FC_MAX,
   IRS1 = FC_MAX,
   IRS_MAX,
@@ -32,6 +31,8 @@ enum { // all values after an intermediate _MAX must
 const int DRPin[DR_COUNT] = {0, 4, 8};
 
 Bounce * dr[DR_COUNT];
+
+int dataref[DR_COUNT]; //fake dataref
 
 // Element handling registers
 bool drAck[DR_COUNT] = {false}; 
@@ -82,6 +83,7 @@ void loop() {
   // "Datarefs"
   for (int i = 0; i < DR_COUNT; ++i) {
     dr[i]->update();
+    dataref[i] = !(dr[i]->read());
   }
   // Switches
   for (int i = 0; i < SW_COUNT; ++i) {
@@ -95,8 +97,17 @@ void loop() {
   bool saOn[SA_COUNT] = {false}; // for lighting each of the twelve SAs
   bool mcOn = false; //for lighting Master Caution
   
+  class SystemAnnc {
+  public:
+    bool lit();
+  private:
+    int lowIndex_;
+    int highIndex_;
+    bool ack_;
+  };
+
   for (int i = FC1; i < FC_MAX; ++i) {
-    if(dr[i]->read() == LOW) { //if overhead annunciator is lit
+    if(dataref[i]) { //if overhead annunciator is lit
       mcOn = true;
       if(!drAck[i]) {  // if it has not yet caused its SA to light
         saOn[0] = true; // light the SA
@@ -109,7 +120,7 @@ void loop() {
   
   // IRS datarefs
   for (int i = IRS1; i < IRS_MAX; ++i) {
-    if(dr[i]->read() == LOW) { //if overhead annunciator is lit
+    if(dataref[i]) { //if overhead annunciator is lit
       mcOn = true;
       if(!drAck[i]) {  // if it has not yet caused its SA to light
         saOn[1] = true; // light the SA
