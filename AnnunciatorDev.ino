@@ -1,41 +1,110 @@
 #include <Bounce.h>
 
+///////////////// Datarefs (faked with switches)
+//
+// Datarefs are grouped into 12 systems
+//
+// FC: Flight Controls
+// IRS
+// FUEL
+// ELEC
+// APU
+// OD: OVHT/DET
+// AI: Anti-Ice
+// HYD
+// DOOR
+// ENG
+// OH: Overhead
+// AC: Air Conditioning
+
+// "Datarefs" for individual overhead-panel annunciators
+enum { // all values after an intermediate _COUNT must
+  FC1 = 0,  // equal the preceding value
+  FC2,
+  FC_COUNT,
+  IRS1 = FC_COUNT,
+  IRS_COUNT,
+  DR_COUNT = IRS_COUNT};
+
+const int DRPin[DR_COUNT] = {0, 4, 8};
+
+Bounce * dr[DR_COUNT];
+
+////////////////// Switch inputs
 enum {
-  PIN_SW1 = 0,
-  PIN_SW2 = 4,
-  PIN_SW3 = 8,
-  PIN_SW4 = 12,
-  PIN_SW5 = 16,
-  PIN_COUNT = 5};
+  SW_MASTER = 0,
+  SW_SIXPACK,
+  SW_COUNT};
 
-const int InPin[] = {
-  PIN_SW1, PIN_SW2, PIN_SW3, PIN_SW4, PIN_SW5};
+const int SwPin[SW_COUNT] = {12, 16};
 
-Bounce * sw[5];
+Bounce * sw[SW_COUNT];
+
+///////////////////////// LED outputs
+enum {
+  LED_FC,
+  LED_IRS,
+  LED_MC,
+  LED_COUNT};
+
+const int LedPin[LED_COUNT] = {
+  44, 45, LED_BUILTIN };
+
 
 void setup() {
-  for (int i = 0; i < PIN_COUNT; ++i) {
-    sw[i] = new Bounce (InPin[i], 5);
-    pinMode(InPin[i], INPUT_PULLUP );
+  // "datarefs"
+  for (int i = 0; i < DR_COUNT; ++i) {
+    dr[i] = new Bounce (DRPin[i], 5);
+    pinMode(DRPin[i], INPUT_PULLUP );
   }
 
-  pinMode(LED_BUILTIN, OUTPUT);
+  // switch input
+  for (int i = 0; i < SW_COUNT; ++i) {
+    sw[i] = new Bounce (SwPin[i], 5);
+    pinMode(SwPin[i], INPUT_PULLUP );
+  }
+  // LED output
+  for (int i = 0; i < LED_COUNT; ++i) {
+    pinMode(LedPin[i], OUTPUT);
+  }
 }
 
 void loop() {
-  for (int i = 0; i < PIN_COUNT; ++i) {
+  // "Datarefs"
+  for (int i = 0; i < DR_COUNT; ++i) {
+    dr[i]->update();
+  }
+  // Switches
+  for (int i = 0; i < SW_COUNT; ++i) {
     sw[i]->update();
   }
 
-  if(sw[1]->read() == LOW
-    || sw[2]->read() == LOW
-    || sw[3]->read() == LOW
-    || sw[4]->read() == LOW
-    || sw[5]->read() == LOW) {
-    digitalWrite(LED_BUILTIN, HIGH);
-  } 
-  else {
-    digitalWrite(LED_BUILTIN, LOW);
+  ////////////////////////////////////
+  // System Annunciators
+  //
+  // Flight Control datarefs
+  bool saOn[12] = {false};
+
+  for (int i = FC1; i < FC_COUNT; ++i) {
+    if(dr[i]->read() == LOW)
+      saOn[0] = true;
   }
+  digitalWrite(LedPin[LED_FC], saOn[0]);
+
+  // IRS datarefs
+  for (int i = IRS1; i < IRS_COUNT; ++i) {
+    if(dr[i]->read() == LOW)
+      saOn[1] = true;
+  }
+  digitalWrite(LedPin[LED_IRS], saOn[1]);
+
+  //etc
+
+  bool tmp = false;
+  for (int i = 0; i < 12; ++i) {
+    if(saOn[i])
+      tmp = true;
+  }
+  digitalWrite(LedPin[LED_MC], tmp);
 }
 
