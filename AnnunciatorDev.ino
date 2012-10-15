@@ -4,31 +4,39 @@
 //
 // Datarefs are grouped into 12 systems
 //
-// FC: Flight Controls
-// IRS
-// FUEL
-// ELEC
-// APU
-// OD: OVHT/DET
-// AI: Anti-Ice
-// HYD
-// DOOR
-// ENG
-// OH: Overhead
-// AC: Air Conditioning
+enum {
+  FC, //Flight Controls
+  IRS,
+  //  FUEL,
+  //  ELEC,
+  //  APU,
+  //  OD, // OVHT/DET
+  //  AI, // Anti-Ice
+  //  HYD,
+  //  DOOR,
+  //  ENG,
+  //  OH, // Overhead
+  //  AC, // Air Conditioning
+  SA_COUNT
+};
 
 // "Datarefs" for individual overhead-panel annunciators
-enum { // all values after an intermediate _COUNT must
+enum { // all values after an intermediate _MAX must
   FC1 = 0,  // equal the preceding value
   FC2,
-  FC_COUNT,
-  IRS1 = FC_COUNT,
-  IRS_COUNT,
-  DR_COUNT = IRS_COUNT};
+  FC_MAX,
+  IRS1 = FC_MAX,
+  IRS_MAX,
+  DR_COUNT = IRS_MAX};
 
 const int DRPin[DR_COUNT] = {0, 4, 8};
 
 Bounce * dr[DR_COUNT];
+
+// Element handling registers
+bool drAck[DR_COUNT] = {false}; 
+bool mcLit = false;
+bool saLit[SA_COUNT] = {false};
 
 ////////////////// Switch inputs
 enum {
@@ -44,7 +52,8 @@ Bounce * sw[SW_COUNT];
 enum {
   LED_FC,
   LED_IRS,
-  LED_MC,
+  LED_SA_MAX,
+  LED_MC = LED_SA_MAX,
   LED_COUNT};
 
 const int LedPin[LED_COUNT] = {
@@ -57,7 +66,7 @@ void setup() {
     dr[i] = new Bounce (DRPin[i], 5);
     pinMode(DRPin[i], INPUT_PULLUP );
   }
-
+  
   // switch input
   for (int i = 0; i < SW_COUNT; ++i) {
     sw[i] = new Bounce (SwPin[i], 5);
@@ -78,33 +87,78 @@ void loop() {
   for (int i = 0; i < SW_COUNT; ++i) {
     sw[i]->update();
   }
-
+  
   ////////////////////////////////////
   // System Annunciators
   //
   // Flight Control datarefs
-  bool saOn[12] = {false};
-
-  for (int i = FC1; i < FC_COUNT; ++i) {
-    if(dr[i]->read() == LOW)
-      saOn[0] = true;
+  bool saOn[SA_COUNT] = {false}; // for lighting each of the twelve SAs
+  bool mcOn = false; //for lighting Master Caution
+  
+  for (int i = FC1; i < FC_MAX; ++i) {
+    if(dr[i]->read() == LOW) { //if overhead annunciator is lit
+      mcOn = true;
+      if(!drAck[i]) {  // if it has not yet caused its SA to light
+        saOn[0] = true; // light the SA
+        drAck[i] = true; // but only once
+      }
+    } else { // if overhead annunciator not lit
+      drAck[i] = false; // reset acknowledgement
+    }
   }
-  digitalWrite(LedPin[LED_FC], saOn[0]);
-
+  
   // IRS datarefs
-  for (int i = IRS1; i < IRS_COUNT; ++i) {
-    if(dr[i]->read() == LOW)
-      saOn[1] = true;
+  for (int i = IRS1; i < IRS_MAX; ++i) {
+    if(dr[i]->read() == LOW) { //if overhead annunciator is lit
+      mcOn = true;
+      if(!drAck[i]) {  // if it has not yet caused its SA to light
+        saOn[1] = true; // light the SA
+        drAck[i] = true; // but only once
+      }
+    } else { // if overhead annunciator not lit
+      drAck[i] = false; // reset acknowledgement
+    }
   }
-  digitalWrite(LedPin[LED_IRS], saOn[1]);
-
-  //etc
-
-  bool tmp = false;
-  for (int i = 0; i < 12; ++i) {
-    if(saOn[i])
-      tmp = true;
+  
+  ///////////////////////////////////
+  // Input handling
+  //
+  if(sw[SW_SIXPACK]->read() == LOW) { //if sixpack is pressed
+    for (int i = 0; i < LED_SA_MAX; ++i) {
+      digitalWrite(LedPin[i], HIGH); //light all the System Annunciators
+    }
   }
-  digitalWrite(LedPin[LED_MC], tmp);
+  if(sw[SW_SIXPACK]->risingEdge()) { //when sixpack released
+    for (int i = 0; i < DR_COUNT; ++i) {
+      drAck[i] = false; // reset all acknowledgements
+    }
+    for (int i = 0; i < LED_SA_MAX; ++i) {
+      digitalWrite(LedPin[i], LOW);
+    }
+  }
+  
+  
+  if(sw[SW_MASTER]->read() == LOW) { //if Master Caution is pressed
+    for (int i = 0; i < LED_SA_MAX; ++i) {
+      saLit[i] = false;
+    }
+    for (int i = 0; i < SA_COUNT; ++i) {
+      saOn[i] = false;
+    }
+    mcLit = true;
+  }
+  if (sw[SW_MASTER]->risingEdge()) {
+    mcLit = false;
+  }
+  
+  // light SA & MC
+  for (int i = 0; i < SA_COUNT; ++i) {
+    if (saOn[i])
+      saLit[i] = true;
+    digitalWrite(LedPin[i], saLit[i]);
+  }
+  if (mcOn)
+    mcLit = true;
+  digitalWrite(LedPin[LED_MC], mcLit);
 }
 
