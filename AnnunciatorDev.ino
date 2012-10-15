@@ -32,9 +32,76 @@ const int DRPin[DR_COUNT] = {0, 4, 8};
 
 Bounce * dr[DR_COUNT];
 
-int dataref[DR_COUNT]; //fake dataref
+int dataref[DR_COUNT] = {0}; //fake dataref
 
 // Element handling registers
+class SystemAnnc {
+public:
+  SystemAnnc(const int &dataref, const int& beginDataref, const int& endDataref);
+  //SystemAnnc(const int &dataref, enum dBegin, enum dEnd);
+  bool foo();
+  bool lit();
+  void turnOn();
+  static void recall();
+  unsigned int getCount();
+  static unsigned int getTotal();
+private:
+  const int * dataref_;
+  const int beginDataref_; // start and end of dataref array
+  const int endDataref_;   // for DRs belonging to this SA
+  bool isLit_;
+  bool turnOn_;
+  bool ack_;
+  static unsigned int total_;
+};
+unsigned int SystemAnnc::total_ = 0;
+unsigned int SystemAnnc::getTotal() { return total_; }
+//SystemAnnc::SystemAnnc (const int &dataref, dBegin, dEnd) {
+//  SystemAnnc::SystemAnnc (
+//}
+
+SystemAnnc::SystemAnnc (const int& dataref, const int& beginDataref, const int& endDataref) :
+  dataref_(&dataref),
+  beginDataref_(beginDataref),
+  endDataref_(endDataref)
+{
+  //  dataref_ = &dataref;
+  //  beginDataref_ = beginDataref;
+  //  endDataref_ = endDataref;
+  ++total_;
+  isLit_ = false;
+  turnOn_ = false;
+  ack_ = false;
+}
+void SystemAnnc::turnOn() {
+  isLit_ = true;
+}
+bool SystemAnnc::lit() {
+  return isLit_;
+}
+bool SystemAnnc::foo() {
+  for (int i = beginDataref_; i < endDataref_; ++i) {
+    if(dataref_[i]) { //if overhead annunciator is lit
+      if(!ack_) {  // if it has not yet caused its SA to light
+        turnOn_ = true; // light the SA
+        ack_ = true; // but only once
+      }
+      return true;
+    } else { // if overhead annunciator not lit
+      ack_ = false; // reset acknowledgement
+      return false;
+    }
+  }
+}
+
+SystemAnnc * sa[SA_COUNT];
+
+void setupSA() {
+  sa[FC] = new SystemAnnc(dataref[0], FC1, FC_MAX);
+  sa[IRS] = new SystemAnnc(dataref[0], IRS1, IRS_MAX);
+  //etc
+}
+
 bool drAck[DR_COUNT] = {false}; 
 bool mcLit = false;
 bool saLit[SA_COUNT] = {false};
@@ -62,9 +129,12 @@ const int LedPin[LED_COUNT] = {
 
 
 void setup() {
+  setupSA();
+  
   // "datarefs"
   for (int i = 0; i < DR_COUNT; ++i) {
     dr[i] = new Bounce (DRPin[i], 5);
+    dr[i]->write(HIGH);
     pinMode(DRPin[i], INPUT_PULLUP );
   }
   
@@ -97,15 +167,6 @@ void loop() {
   bool saOn[SA_COUNT] = {false}; // for lighting each of the twelve SAs
   bool mcOn = false; //for lighting Master Caution
   
-  class SystemAnnc {
-  public:
-    bool lit();
-  private:
-    int lowIndex_;
-    int highIndex_;
-    bool ack_;
-  };
-
   for (int i = FC1; i < FC_MAX; ++i) {
     if(dataref[i]) { //if overhead annunciator is lit
       mcOn = true;
