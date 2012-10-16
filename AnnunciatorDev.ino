@@ -1,11 +1,14 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// 737 Annunciator
+// 737 Annunciator (Dataref Input demonstration)
 //
 // A simulation of the System Annunciators and Master Caution light for the
 // Boeing 737-NG.
 //
-// The System Annunciators are located prominently on the glareshield, in two
+// This is NOT TESTED with X-Plane, as I don't have a capable PC right now.
+// It does compile though.
+//
+// The System Annunciators (SA) are located prominently on the glareshield, in two
 // clusters of six, referred to as a 'six-pack'. They represent multiple sub-
 // annunciators, all located less visibly on the overhead panel. When one of
 // the sub-annunciators lights up, the associated System Annunciator lights up
