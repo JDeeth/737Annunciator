@@ -8,7 +8,7 @@
 // This version does not interface with X-Plane at all. It is a completely
 // self-contained demonstration of the behaviour of the the 737 warning system.
 //
-// The System Annunciators are located prominently on the glareshield, in two
+// The System Annunciators (SA) are located prominently on the glareshield, in two
 // clusters of six, referred to as a 'six-pack'. They represent multiple sub-
 // annunciators, all located less visibly on the overhead panel. When one of
 // the sub-annunciators lights up, the associated System Annunciator lights up
@@ -47,12 +47,15 @@
 #include <Bounce.h>
 #include "SystemAnnc.h"
 
-////////////////////// Element Annunciator Datarefs ////////////
+////////////////////// 
+// System Annunciator index
 //
-// Datarefs are grouped into these 12 systems.
-// Each system has a System Annunciator.
+// A System Annunciator represents a group of sub-annunciators from the
+// overhead panel. The 737-NG has twelve.
 //
 // Enable as many entries as you have SA LEDs to illuminate.
+//
+// SA_COUNT is the number of System Annunciators in your system.
 //
 enum SYS_ANNC{
   FLT, //Flight Controls
@@ -60,7 +63,7 @@ enum SYS_ANNC{
   //FUEL,
   //ELEC,
   //APU,
-  //OD, // OVHT/DET
+  //OVHT, // OVHT/DET
   //AI, // Anti-Ice
   //HYD,
   //DOOR,
@@ -70,35 +73,37 @@ enum SYS_ANNC{
   SA_COUNT
 };
 
-// Dataref index
+////////////////////////////
+// Sub-annunciator index
 //
-// The values FC1, FC2 etc, represent datarefs for overhead FLT CTRL annunciators
-// IRS1 etc represents IRS annunciators
-// The _MAX values do not represent an individual dataref. They are used
-// for calculating the number of datarefs in an individual category.
+// This enum represents the number and categories of the sub-annunciators (the
+// overhead panel annunciators)
 //
-// For instance, IRS_MAX - IRS1 is the number of FLT CTRL datarefs.
+// The _MAX values do not represent an individual annunciator. They are used
+// for calculating the number of annunciators in an individual category.
 //
-// DR_COUNT is the number of datarefs overall.
+// For instance, IRS_MAX - IRS1 is the number of IRS sub-annunciators.
+//
+// SUB_COUNT is the total number of sub-annunciators in your system.
 //
 // To make the maths work out correctly, every entry following a _MAX entry
 // must be assigned to be equal to the _MAX entry.
-// For example, IRS1 = FC_MAX
+// For example, IRS1 = FLT_MAX
 // Be careful to keep this convention!!
 //
-enum DATAREF_INDEX{
+enum SUB_ANNUNCIATOR_INDEX{
   FLT1 = 0,  // the value which follows any _MAX value
   FLT2,      // MUST equal the preceding value!!
   FLT_MAX,
   IRS1 = FLT_MAX,
   IRS_MAX,
-  DR_COUNT = IRS_MAX};
+  SUB_COUNT = IRS_MAX};
 
 ////////////////////
+// Hardware for controlling sub-annunciators
 //
-// these are for my dataref-simulating input switches
-const int DRPin[DR_COUNT] = {0, 4, 8};
-Bounce * dr[DR_COUNT];
+const int DRPin[SUB_COUNT] = {0, 4, 8};
+Bounce * dr[SUB_COUNT];
 //
 // Because I currently don't have a working X-Plane install,
 // I cannot test this with actual datarefs. So I'm using a
@@ -107,28 +112,28 @@ Bounce * dr[DR_COUNT];
 ////////////////////
 
 ////////////////////
-// sub-annunciator array(s)
+// Sub-annunciator array
 //
 // This passes the state of the sub-annunciators to the SystemAnnc class
 // I chose to use one long array to cover all SA sub-annunciators, so it could
-// be entirely populated using one for loop, but it would be equally
-// appropriate to use multiple short arrays, one per SA.
-// 
-// Write your own code in loop() to populate this/these array/s with the state
-// of the sub-annunciators. This way you have flexibility to decide what can be
-// used as a sub-annunciator.
+// be entirely populated using one 'for' loop, but it would be equally
+// appropriate to use multiple short arrays, with one for each SA.
 //
-bool anncArray[DR_COUNT] = {0};
+// Write your own code in loop() to populate the arrays(s) with the state
+// of the sub-annunciators. With this method, you have flexibility in choosing
+// a data-source for the state of the sub-annunciators (Teensyduino dataref,
+// SDK dataref, plugin internal data, hardware...)
+//
+bool anncArray[SUB_COUNT] = {0};
 
 // System Annunciator array
-SystemAnnc * sa[SA_COUNT];
+SystemAnnc * sa[SUB_COUNT];
 
 void setupSA() {
   sa[FLT] = new SystemAnnc(anncArray[0], FLT1, FLT_MAX);
   sa[IRS] = new SystemAnnc(anncArray[0], IRS1, IRS_MAX);
-  //sa[FUEL] = new SystemAnnc(dataref[0], FUEL1, FUEL_MAX);
+  //sa[FUEL] = new SystemAnnc(anncArray[0], FUEL1, FUEL_MAX);
   // etc
-  // Use Dataref[0] and values from DATAREF_INDEX for each entry!
 }
 
 // Master Caution Lit flag
@@ -136,7 +141,12 @@ bool masterCautionLit = false;
 
 ///////////////////// Switch inputs ////////////////////////
 //
-// Match each SW_PIN entry with a SwPin entry!!
+// Index of hardware input switches.
+// 
+// SW_COUNT is the number of input switches.
+//
+// Be sure to match each SW_PIN entry with a SwPin entry!!
+//
 enum SW_PIN{
   SW_MASTER = 0,
   SW_SIXPACK,
@@ -144,9 +154,18 @@ enum SW_PIN{
 
 const int SwPin[SW_COUNT] = {12, 16}; // switch hardware pins
 
-Bounce * sw[SW_COUNT];
+Bounce * sw[SW_COUNT]; // will be populated with Bounce(SwPin) in setup()
 
 ///////////////////////// LED outputs /////////////////
+//
+// Index of output LEDs.
+// 
+// LED_SA_MAX is the number of System Annunciator LEDs in the system.
+// 
+// LED_COUNT is the number of LEDs in the system.
+//
+// Be sure to match each LED_PIN entry with a LedPin entry!!
+//
 enum LED_PIN{
   LED_FC,
   LED_IRS,
@@ -156,7 +175,7 @@ enum LED_PIN{
   LED_COUNT};          // must be assigned the value of the _MAX
 
 const int LedPin[LED_COUNT] = { // LED hardware pins
-  44, 45, LED_BUILTIN };
+                                44, 45, LED_BUILTIN };
 
 ///////////////////////////// setup /////////////////////////
 void setup() {
@@ -164,20 +183,20 @@ void setup() {
   // can configure the System Annc array in the same
   // part of the source file as all the input stuff.
   setupSA();
-
+  
   // My hardware-simulated "datarefs"
-  for (int i = 0; i < DR_COUNT; ++i) {
+  for (int i = 0; i < SUB_COUNT; ++i) {
     dr[i] = new Bounce (DRPin[i], 5);
     dr[i]->write(HIGH);
     pinMode(DRPin[i], INPUT_PULLUP );
   }
-
+  
   // switch input
   for (int i = 0; i < SW_COUNT; ++i) {
     sw[i] = new Bounce (SwPin[i], 5);
     pinMode(SwPin[i], INPUT_PULLUP );
   }
-
+  
   // LED output
   for (int i = 0; i < LED_COUNT; ++i) {
     pinMode(LedPin[i], OUTPUT);
@@ -190,28 +209,29 @@ void loop() {
   /////////////////////////
   // Assigning values to sub-annc array[]
   //
-  // Here is where anncArray is populated with the state of the 
+  // Here is where anncArray is populated with the state of the
   // sub-annunciators. In this offline testing code, the sub-annunciator
   // datarefs are represented by switches.
   //
-  for (int i = 0; i < DR_COUNT; ++i) {
+  for (int i = 0; i < SUB_COUNT; ++i) {
     dr[i]->update();
     anncArray[i] = !(dr[i]->read());
   }
   
   ////////////////////////
   // Update input switches
+  //
   for (int i = 0; i < SW_COUNT; ++i) {
     sw[i]->update();
   }
-
+  
   ////////////////////////////////////
   // Update System Annunciators
   //
   for (int i = 0; i < SA_COUNT; ++i) {
     masterCautionLit += sa[i]->checkSubAnncs();
   }
-
+  
   ///////////////////////////////////
   // Input handling
   //
@@ -224,10 +244,10 @@ void loop() {
   if (sw[SW_MASTER]->risingEdge()) { // when MC is released
     masterCautionLit = false;                   // extinguish Master Caution
   }
-
+  
   // Light/extinguish Master Caution
   digitalWrite(LedPin[LED_MC], masterCautionLit);
-
+  
   if(sw[SW_SIXPACK]->risingEdge()) { //when sixpack released
     for (int i = 0; i < SA_COUNT; ++i) {
       sa[i]->recall();              // reset all acknowledgements
@@ -236,7 +256,7 @@ void loop() {
       digitalWrite(LedPin[i], LOW); // and extinguish all SAs.
     }                               // They will be relit next loop() if called for.
   }
-
+  
   if(sw[SW_SIXPACK]->read() == LOW) { //if sixpack is pressed
     for (int i = 0; i < LED_SA_MAX; ++i) {
       digitalWrite(LedPin[i], HIGH); //light all the System Annunciators
@@ -246,7 +266,7 @@ void loop() {
       digitalWrite(LedPin[i], sa[i]->isLit()); //light SAs if called for
     }
   }
-
+  
   // voila!
 }
 
