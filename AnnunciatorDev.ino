@@ -47,12 +47,15 @@
 #include <Bounce.h>
 #include "SystemAnnc.h"
 
-////////////////////// Element Annunciator Datarefs ////////////
+//////////////////////
+// System Annunciator index
 //
-// Datarefs are grouped into these 12 systems.
-// Each system has a System Annunciator.
+// A System Annunciator represents a group of sub-annunciators from the
+// overhead panel. The 737-NG has twelve.
 //
 // Enable as many entries as you have SA LEDs to illuminate.
+//
+// SA_COUNT is the number of System Annunciators in your system.
 //
 enum SYS_ANNC{
   FLT, //Flight Controls
@@ -70,84 +73,109 @@ enum SYS_ANNC{
   SA_COUNT
 };
 
-/////////////////////////
-// Dataref index
+////////////////////////////
+// Sub-annunciator indexes
 //
-// The values FLT, FLT2 etc, represent datarefs for overhead FLT CTRL annunciators
-// IRS1 etc represents IRS annunciators
-// The _MAX values do not represent an individual dataref. They are used
-// for calculating the number of datarefs in an individual category.
+// These enums represent the number and categories of the sub-annunciators (the
+// overhead panel annunciators)
 //
-// For instance, IRS_MAX - IRS1 is the number of FLT CTRL datarefs.
+// xxx_COUNT is the number of sub-annunciators in that System.
 //
-// DR_COUNT is the number of datarefs overall.
-//
-// To make the maths work out correctly, every entry following a _MAX entry
-// must be assigned to be equal to the _MAX entry.
-// For example, IRS1 = FLT_MAX
-// Be careful to keep this convention!!
-//
-enum SUB_ANNUNCIATOR_INDEX{
-  FLT1 = 0,  // the value which follows any _MAX value
-  FLT2,      // MUST equal the preceding value!!
-  FLT_MAX,
-  IRS1 = FLT_MAX,
-  IRS2,
-  IRS_MAX,
-  FUEL1 = IRS_MAX,
+enum FLT_ANNC {
+  FLT1,
+  FLT2,
+  // add more here
+  FLT_COUNT };
+
+enum IRS_ANNC {
+  IRS1,
+  // add more here
+  IRS_COUNT};
+
+enum FUEL_ANNC {
+  FUEL1,
   FUEL2,
-  FUEL_MAX,
-  ELEC1 = FUEL_MAX, // You can have as many or as few datarefs in each
-  ELEC2,            // category as you choose. I've arbitrarily picked
-  ELEC3,            // two in each category and four in ELEC.
+  // add more here
+  FUEL_COUNT };
+
+enum ELEC_ANNC {
+  ELEC1,
+  ELEC2,
+  ELEC3,
   ELEC4,
-  ELEC_MAX,
-  APU1 = ELEC_MAX,
+  // add more here
+  ELEC_COUNT };
+
+enum APU_ANNC {
+  APU1,
   APU2,
-  APU_MAX,
-  OVHT1 = APU_MAX,
+  // add more here
+  APU_COUNT};
+
+enum OVHT_ANNC {
+  OVHT1,
   OVHT2,
-  OVHT_MAX,
-  SUB_COUNT = OVHT_MAX};
+  // add more here
+  OVHT_COUNT};
+
+// Warning. Keep this updated if you add more SAs!
+const int SUB_COUNT = FLT_COUNT + IRS_COUNT + FUEL_COUNT +
+                      ELEC_COUNT + APU_COUNT + OVHT_COUNT;
+
 
 ////////////////////
-// sub-annunciator array(s)
+// Sub-annunciator arrays
 //
-// This passes the state of the sub-annunciators to the SystemAnnc class
-// I chose to use one long array to cover all SA sub-annunciators, so it could
-// be entirely populated using one for loop, but it would be equally
-// appropriate to use multiple short arrays, one per SA.
+// These pass the state of one system's sub-annunciators to the SystemAnnc class
 //
-// Write your own code in loop() to populate this/these array/s with the state
-// of the sub-annunciators. This way you have flexibility to decide what can be
-// used as a sub-annunciator.
-//
-bool anncArray[SUB_COUNT] = {0};
+bool fltAnnc[FLT_COUNT] = {false};
+bool irsAnnc[IRS_COUNT] = {false};
+bool fuelAnnc[FUEL_COUNT] = {false};
+bool elecAnnc[ELEC_COUNT] = {false};
+bool apuAnnc[APU_COUNT] = {false};
+bool ovhtAnnc[OVHT_COUNT] = {false};
 
-FlightSimInteger dr[SUB_COUNT];
+////////////////////
+// Simulator input
+//
+// These datarefs will be used to determine which sub-annunciators are
+// currently lit.
+//
+FlightSimInteger fltDr[FLT_COUNT];
+FlightSimInteger irsDr[IRS_COUNT];
+FlightSimInteger fuelDr[FUEL_COUNT];
+FlightSimInteger elecDr[ELEC_COUNT];
+FlightSimInteger apuDr[APU_COUNT];
+FlightSimInteger ovhtDr[OVHT_COUNT];
+
 FlightSimFloat magHeading;
 
 void setupDR() {
   // note: the following datarefs have been selected at semi-random.
   // It is not possible for me to check correct behaviour, or spelling
   // as, at the time of writing, I don't have a working X-Plane installation.
-  dr[FLT1] = XPlaneRef("sim/cockpit/switches/yaw_damper_on");
-  dr[FLT2] = XPlaneRef("sim/cockpit2/annunciators/autopilot_trim_fail");
-  dr[IRS1] = XPlaneRef("sim/cockpit2/electrical/dc_voltmeter_selection2");
-  dr[IRS2] = XPlaneRef("sim/operation/failures/rel_efis_1");
-  dr[FUEL1] = XPlaneRef("sim/cockpit2/annunciators/fuel_pressure_low[0]");
-  dr[FUEL2] = XPlaneRef("sim/cockpit2/annunciators/fuel_pressure_low[1]");
-  dr[ELEC1] = XPlaneRef("sim/cockpit2/annunciators/low_voltage");
-  dr[ELEC2] = XPlaneRef("sim/cockpit2/annunciators/generator_off[0]");
-  dr[ELEC3] = XPlaneRef("sim/cockpit2/annunciators/generator_off[1]");
-  dr[ELEC4] = XPlaneRef("sim/cockpit2/annunciators/inverter_off[0]");
-  dr[APU1] = XPlaneRef("sim/cockpit2/electrical/APU_generator_on");
-  dr[APU2] = XPlaneRef("sim/operation/failures/rel_APU_press");
-  dr[OVHT1] = XPlaneRef("sim/cockpit2/annunciators/hvac");
-  dr[OVHT2] = XPlaneRef("sim/"); //dummy dataref
-  
+
+  fltDr[FLT1] = XPlaneRef("sim/cockpit/switches/yaw_damper_on");
+  fltDr[FLT2] = XPlaneRef("sim/cockpit2/annunciators/autopilot_trim_fail");
+
+  irsDr[IRS1] = XPlaneRef("sim/cockpit2/electrical/dc_voltmeter_selection2");
+
+  fuelDr[FUEL1] = XPlaneRef("sim/cockpit2/annunciators/fuel_pressure_low[0]");
+  fuelDr[FUEL2] = XPlaneRef("sim/cockpit2/annunciators/fuel_pressure_low[1]");
+
+  elecDr[ELEC1] = XPlaneRef("sim/cockpit2/annunciators/low_voltage");
+  elecDr[ELEC2] = XPlaneRef("sim/cockpit2/annunciators/generator_off[0]");
+  elecDr[ELEC3] = XPlaneRef("sim/cockpit2/annunciators/generator_off[1]");
+  elecDr[ELEC4] = XPlaneRef("sim/cockpit2/annunciators/inverter_off[0]");
+
+  apuDr[APU1] = XPlaneRef("sim/cockpit2/electrical/APU_generator_on");
+  apuDr[APU2] = XPlaneRef("sim/operation/failures/rel_APU_press");
+
+  ovhtDr[OVHT1] = XPlaneRef("sim/cockpit2/annunciators/hvac");
+  ovhtDr[OVHT2] = XPlaneRef("sim/"); //dummy dataref
+
   magHeading = XPlaneRef("sim/cockpit2/gauges/indicators/compass_heading_deg_mag");
-  
+
   return;
 }
 
@@ -155,13 +183,12 @@ void setupDR() {
 SystemAnnc * sa[SA_COUNT];
 
 void setupSA() {
-  sa[FLT] = new SystemAnnc(anncArray[0], FLT1, FLT_MAX);
-  sa[IRS] = new SystemAnnc(anncArray[0], IRS1, IRS_MAX);
-  sa[FUEL] = new SystemAnnc(anncArray[0], FUEL1, FUEL_MAX);
-  sa[ELEC] = new SystemAnnc(anncArray[0], ELEC1, ELEC_MAX);
-  sa[APU] = new SystemAnnc(anncArray[0], APU1, APU_MAX);
-  sa[OVHT] = new SystemAnnc(anncArray[0], OVHT1, OVHT_MAX);
-  // etc
+  sa[FLT] = new SystemAnnc(fltAnnc[0], FLT1, FLT_COUNT);
+  sa[IRS] = new SystemAnnc(irsAnnc[0], IRS1, IRS_COUNT);
+  sa[FUEL] = new SystemAnnc(fuelAnnc[0], FUEL1, FUEL_COUNT);
+  sa[ELEC] = new SystemAnnc(elecAnnc[0], ELEC1, ELEC_COUNT);
+  sa[APU] = new SystemAnnc(apuAnnc[0], APU1, APU_COUNT);
+  sa[OVHT] = new SystemAnnc(ovhtAnnc[0], OVHT1, OVHT_COUNT);
 }
 
 // Master Caution Lit flag
@@ -214,58 +241,72 @@ void setup() {
   // part of the source file as all the input stuff.
   setupSA();
   setupDR();
-  
+
   // switch input
   for (int i = 0; i < SW_COUNT; ++i) {
     sw[i] = new Bounce (SwPin[i], 5);
     pinMode(SwPin[i], INPUT_PULLUP );
   }
-  
+
   // LED output
   for (int i = 0; i < LED_SA_COUNT; ++i) {
     pinMode(LedPin[i], OUTPUT);
   }
-  
+
   pinMode(mcPin, OUTPUT);
 }
 
 ////////////////////////////////// loop ////////////////////
 void loop() {
   FlightSim.update();
-  
+
   /////////////////////////
   // Assigning values to sub-annc array
   //
   // Here is where anncArray is populated with the state of the
   // sub-annunciators.
   //
-  for (int i = 0; i < SUB_COUNT; ++i) {
-    anncArray[i] = dr[i]; //very simple, eh?
+  for (int i = 0; i < FLT_COUNT; ++i) {
+    fltAnnc[i] = fltDr[i];
   }
-  
-  // Demonstration of creating virtual sub-annunciator from an arbitrary
+  for (int i = 0; i < IRS_COUNT; ++i) {
+    irsAnnc[i] = irsDr[i];
+  }
+  for (int i = 0; i < FUEL_COUNT; ++i) {
+    fuelAnnc[i] = fuelDr[i];
+  }
+  for (int i = 0; i < ELEC_COUNT; ++i) {
+    elecAnnc[i] = elecDr[i];
+  }
+  for (int i = 0; i < APU_COUNT; ++i) {
+    apuAnnc[i] = apuDr[i];
+  }
+  for (int i = 0; i < OVHT_COUNT; ++i) {
+    ovhtAnnc[i] = ovhtDr[i];
+  }
+
   // floating point dataref.
   // If the magnetic heading is between 90 and 180, the OVHT System Annunciator
   // will be triggered.
   if (magHeading > 90 && magHeading < 180) {
-    dr[OVHT2] = true;
+    ovhtDr[OVHT2] = true;
   } else {
-    dr[OVHT2] = false;
+    ovhtDr[OVHT2] = false;
   }
-  
+
   ////////////////////////
   // Update input switches
   for (int i = 0; i < SW_COUNT; ++i) {
     sw[i]->update();
   }
-  
+
   ////////////////////////////////////
   // Update System Annunciators
   //
   for (int i = 0; i < SA_COUNT; ++i) {
     masterCautionLit += sa[i]->checkSubAnncs();
   }
-  
+
   ///////////////////////////////////
   // Input handling
   //
@@ -278,10 +319,10 @@ void loop() {
   if (sw[SW_MASTER]->risingEdge()) { // when MC is released
     masterCautionLit = false;                   // extinguish Master Caution
   }
-  
+
   // Light/extinguish Master Caution
   digitalWrite(mcPin, masterCautionLit);
-  
+
   if(sw[SW_SIXPACK]->risingEdge()) { //when sixpack released
     for (int i = 0; i < SA_COUNT; ++i) {
       sa[i]->recall();              // reset all acknowledgements
@@ -290,7 +331,7 @@ void loop() {
       digitalWrite(LedPin[i], LOW); // and extinguish all SAs.
     }                               // They will be relit next loop() if called for.
   }
-  
+
   if(sw[SW_SIXPACK]->read() == LOW) { //if sixpack is pressed
     for (int i = 0; i < LED_SA_COUNT; ++i) {
       digitalWrite(LedPin[i], HIGH); //light all the System Annunciators
@@ -300,7 +341,7 @@ void loop() {
       digitalWrite(LedPin[i], sa[i]->isLit()); //light SAs if called for
     }
   }
-  
+
   // voila!
 }
 
