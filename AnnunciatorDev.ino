@@ -1,9 +1,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// 737 Annunciator
+// 737 Annunciator (Hardware input demonstration)
 //
 // A simulation of the System Annunciators and Master Caution light for the
 // Boeing 737-NG.
+//
+// This version does not interface with X-Plane at all. It is a completely
+// self-contained demonstration of the behaviour of the the 737 warning system.
 //
 // The System Annunciators are located prominently on the glareshield, in two
 // clusters of six, referred to as a 'six-pack'. They represent multiple sub-
@@ -84,10 +87,10 @@ enum SYS_ANNC{
 // Be careful to keep this convention!!
 //
 enum DATAREF_INDEX{
-  FC1 = 0,  // the value which follows any _MAX value
-  FC2,      // MUST equal the preceding value!!
-  FC_MAX,
-  IRS1 = FC_MAX,
+  FLT1 = 0,  // the value which follows any _MAX value
+  FLT2,      // MUST equal the preceding value!!
+  FLT_MAX,
+  IRS1 = FLT_MAX,
   IRS_MAX,
   DR_COUNT = IRS_MAX};
 
