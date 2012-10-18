@@ -199,7 +199,7 @@ bool masterCautionLit = false;
 ///////////////////// Switch inputs ////////////////////////
 //
 // Match each SW_PIN entry with a SwPin entry!!
-enum SW_PIN{
+enum SW_NAMES{
   SW_MASTER = 0,
   SW_SIXPACK,
   SW_COUNT};
@@ -216,7 +216,7 @@ void setupSW() {
 }
 
 ///////////////////////// LED outputs /////////////////
-enum LED_PIN{
+enum LED_NAMES{
   LED_FLT,
   LED_IRS,
   LED_FUEL,
