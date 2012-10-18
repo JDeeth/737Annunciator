@@ -8,21 +8,23 @@
 //
 
 // Maximum sub-annunciators to be grouped with any one System Annunciator
-const int MAX_ANNCS_PER_SYSTEM = 20;
+const int MAX_ANNCS_PER_SYSTEM = 12;
 
 class SystemAnnc {
 public:
-  SystemAnnc(const bool &anncArray, const int& beginAnnc, const int& endAnnc);
+  SystemAnnc(const bool &anncArray, const unsigned int& beginAnnc, const unsigned int& endAnnc);
   bool checkSubAnncs();
   bool isLit();
   void recall();
   void reset();
+  bool setOverride(bool lit);
 private:
   const bool * annc_;
-  const int beginAnnc_; // start and end of dataref array
-  const int endAnnc_;   // for DRs belonging to this SA
+  const unsigned int beginAnnc_; // start and end of dataref array
+  const unsigned int endAnnc_;   // for DRs belonging to this SA
   bool isLit_;
   bool turnOn_;
+  bool overrideLit_;
   bool ack_[MAX_ANNCS_PER_SYSTEM]; // Acknowledgement. When the reset button is
   // pressed, this Acknowledges all the
   // presently active sub-annunciators,
@@ -38,13 +40,14 @@ private:
 // along with the indexes of the first and last annunciators
 // belonging to this System Annunciator
 //
-SystemAnnc::SystemAnnc (const bool &anncArray, const int& beginAnnc, const int& endAnnc) :
+SystemAnnc::SystemAnnc (const bool &anncArray, const unsigned int& beginAnnc, const unsigned int& endAnnc) :
   annc_(&anncArray),
   beginAnnc_(beginAnnc),
   endAnnc_(endAnnc)
 {
   isLit_ = false;
   turnOn_ = false;
+  overrideLit_ = false;
 }
 
 ///////// bool checkSubAnncs()
@@ -77,6 +80,8 @@ bool SystemAnnc::checkSubAnncs() {
 bool SystemAnnc::isLit() {
   if(turnOn_)
     isLit_ = true;
+  if (overrideLit_)
+      return true;
   return isLit_;
 }
 
@@ -100,6 +105,15 @@ void SystemAnnc::reset() {
   isLit_ = false;
   turnOn_ = false;
 }
+
+/////////// bool setOverride(bool lit)
+//
+// Activates or deactivates the light-on override. For bulb testing.
+//
+bool SystemAnnc::setOverride(bool lit) {
+  overrideLit_ = lit;
+}
+
 /////////////////////////////////////
 
 #endif

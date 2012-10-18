@@ -122,7 +122,6 @@ enum OVHT_ANNC {
 const int SUB_COUNT = FLT_COUNT + IRS_COUNT + FUEL_COUNT +
                       ELEC_COUNT + APU_COUNT + OVHT_COUNT;
 
-
 ////////////////////
 // Sub-annunciator arrays
 //
@@ -134,6 +133,18 @@ bool fuelAnnc[FUEL_COUNT] = {false};
 bool elecAnnc[ELEC_COUNT] = {false};
 bool apuAnnc[APU_COUNT] = {false};
 bool ovhtAnnc[OVHT_COUNT] = {false};
+
+// System Annunciator array
+SystemAnnc * sa[SA_COUNT];
+
+void setupSA() {
+  sa[FLT] = new SystemAnnc(fltAnnc[0], FLT1, FLT_COUNT);
+  sa[IRS] = new SystemAnnc(irsAnnc[0], IRS1, IRS_COUNT);
+  sa[FUEL] = new SystemAnnc(fuelAnnc[0], FUEL1, FUEL_COUNT);
+  sa[ELEC] = new SystemAnnc(elecAnnc[0], ELEC1, ELEC_COUNT);
+  sa[APU] = new SystemAnnc(apuAnnc[0], APU1, APU_COUNT);
+  sa[OVHT] = new SystemAnnc(ovhtAnnc[0], OVHT1, OVHT_COUNT);
+}
 
 ////////////////////
 // Simulator input
@@ -179,18 +190,6 @@ void setupDR() {
   return;
 }
 
-// System Annunciator array
-SystemAnnc * sa[SA_COUNT];
-
-void setupSA() {
-  sa[FLT] = new SystemAnnc(fltAnnc[0], FLT1, FLT_COUNT);
-  sa[IRS] = new SystemAnnc(irsAnnc[0], IRS1, IRS_COUNT);
-  sa[FUEL] = new SystemAnnc(fuelAnnc[0], FUEL1, FUEL_COUNT);
-  sa[ELEC] = new SystemAnnc(elecAnnc[0], ELEC1, ELEC_COUNT);
-  sa[APU] = new SystemAnnc(apuAnnc[0], APU1, APU_COUNT);
-  sa[OVHT] = new SystemAnnc(ovhtAnnc[0], OVHT1, OVHT_COUNT);
-}
-
 // Master Caution Lit flag
 bool masterCautionLit = false;
 
@@ -202,9 +201,16 @@ enum SW_PIN{
   SW_SIXPACK,
   SW_COUNT};
 
-const int SwPin[SW_COUNT] = {12, 16}; // switch hardware pins
+const int SwPin[SW_COUNT] = {20, 21}; // switch hardware pins
 
 Bounce * sw[SW_COUNT];
+
+void setupSW() {
+  for (int i = 0; i < SW_COUNT; ++i) {
+    sw[i] = new Bounce (SwPin[i], 5);
+    pinMode(SwPin[i], INPUT_PULLUP );
+  }
+}
 
 ///////////////////////// LED outputs /////////////////
 enum LED_PIN{
@@ -326,22 +332,15 @@ void loop() {
   if(sw[SW_SIXPACK]->risingEdge()) { //when sixpack released
     for (int i = 0; i < SA_COUNT; ++i) {
       sa[i]->recall();              // reset all acknowledgements
+      sa[i]->setOverride(false);     // clear override
     }
-    for (int i = 0; i < LED_SA_COUNT; ++i) {
-      digitalWrite(LedPin[i], LOW); // and extinguish all SAs.
-    }                               // They will be relit next loop() if called for.
   }
 
-  if(sw[SW_SIXPACK]->read() == LOW) { //if sixpack is pressed
-    for (int i = 0; i < LED_SA_COUNT; ++i) {
-      digitalWrite(LedPin[i], HIGH); //light all the System Annunciators
-    }
-  } else {                           // if sixpack not pressed
+  if(sw[SW_SIXPACK]->read() == LOW) { // if sixpack is pressed
     for (int i = 0; i < SA_COUNT; ++i) {
-      digitalWrite(LedPin[i], sa[i]->isLit()); //light SAs if called for
+      sa[i]->setOverride(true);       // override each SA to light up
     }
   }
 
-  // voila!
 }
 
