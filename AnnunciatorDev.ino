@@ -81,14 +81,15 @@ enum SYS_ANNC{
 //
 // xxx_COUNT is the number of sub-annunciators in that System.
 //
+// DEBUG
 enum FLT_ANNC {
   FLT1,
-  FLT2,
+  //FLT2,
   // add more here
   FLT_COUNT };
 
 enum IRS_ANNC {
-  IRS1,
+  //IRS1,
   // add more here
   IRS_COUNT};
 
@@ -99,22 +100,22 @@ enum FUEL_ANNC {
   FUEL_COUNT };
 
 enum ELEC_ANNC {
-  ELEC1,
-  ELEC2,
-  ELEC3,
-  ELEC4,
+  //ELEC1,
+  //ELEC2,
+  //ELEC3,
+  //ELEC4,
   // add more here
   ELEC_COUNT };
 
 enum APU_ANNC {
-  APU1,
-  APU2,
+  //APU1,
+  //APU2,
   // add more here
   APU_COUNT};
 
 enum OVHT_ANNC {
-  OVHT1,
-  OVHT2,
+  //OVHT1,
+  //OVHT2,
   // add more here
   OVHT_COUNT};
 
@@ -127,23 +128,24 @@ const int SUB_COUNT = FLT_COUNT + IRS_COUNT + FUEL_COUNT +
 //
 // These pass the state of one system's sub-annunciators to the SystemAnnc class
 //
+// DEBUG
 bool fltAnnc[FLT_COUNT] = {false};
-bool irsAnnc[IRS_COUNT] = {false};
+bool irsAnnc[IRS_COUNT];// = {false};
 bool fuelAnnc[FUEL_COUNT] = {false};
-bool elecAnnc[ELEC_COUNT] = {false};
-bool apuAnnc[APU_COUNT] = {false};
-bool ovhtAnnc[OVHT_COUNT] = {false};
+bool elecAnnc[ELEC_COUNT];// = {false};
+bool apuAnnc[APU_COUNT];// = {false};
+bool ovhtAnnc[OVHT_COUNT];// = {false};
 
 // System Annunciator array
 SystemAnnc * sa[SA_COUNT];
 
 void setupSA() {
   sa[FLT] = new SystemAnnc(fltAnnc[0], FLT1, FLT_COUNT);
-  sa[IRS] = new SystemAnnc(irsAnnc[0], IRS1, IRS_COUNT);
+  sa[IRS] = new SystemAnnc(irsAnnc[0], 0,0); //disabled //IRS1, IRS_COUNT);
   sa[FUEL] = new SystemAnnc(fuelAnnc[0], FUEL1, FUEL_COUNT);
-  sa[ELEC] = new SystemAnnc(elecAnnc[0], ELEC1, ELEC_COUNT);
-  sa[APU] = new SystemAnnc(apuAnnc[0], APU1, APU_COUNT);
-  sa[OVHT] = new SystemAnnc(ovhtAnnc[0], OVHT1, OVHT_COUNT);
+  sa[ELEC] = new SystemAnnc(elecAnnc[0], 0,0); //disabled //ELEC1, ELEC_COUNT);
+  sa[APU] = new SystemAnnc(apuAnnc[0], 0,0); //disabled //APU1, APU_COUNT);
+  sa[OVHT] = new SystemAnnc(ovhtAnnc[0], 0,0); //disabled // OVHT1, OVHT_COUNT);
 }
 
 ////////////////////
@@ -159,33 +161,34 @@ FlightSimInteger elecDr[ELEC_COUNT];
 FlightSimInteger apuDr[APU_COUNT];
 FlightSimInteger ovhtDr[OVHT_COUNT];
 
-FlightSimFloat magHeading;
+//FlightSimFloat magHeading;
 
 void setupDR() {
   // note: the following datarefs have been selected at semi-random.
   // It is not possible for me to check correct behaviour, or spelling
   // as, at the time of writing, I don't have a working X-Plane installation.
 
+  // DEBUG
   fltDr[FLT1] = XPlaneRef("sim/cockpit/switches/yaw_damper_on");
-  fltDr[FLT2] = XPlaneRef("sim/cockpit2/annunciators/autopilot_trim_fail");
+  //fltDr[FLT2] = XPlaneRef("sim/cockpit2/annunciators/autopilot_trim_fail");
 
-  irsDr[IRS1] = XPlaneRef("sim/cockpit2/electrical/dc_voltmeter_selection2");
+  //irsDr[IRS1] = XPlaneRef("sim/cockpit2/electrical/dc_voltmeter_selection2");
 
   fuelDr[FUEL1] = XPlaneRef("sim/cockpit2/annunciators/fuel_pressure_low[0]");
   fuelDr[FUEL2] = XPlaneRef("sim/cockpit2/annunciators/fuel_pressure_low[1]");
 
-  elecDr[ELEC1] = XPlaneRef("sim/cockpit2/annunciators/low_voltage");
-  elecDr[ELEC2] = XPlaneRef("sim/cockpit2/annunciators/generator_off[0]");
-  elecDr[ELEC3] = XPlaneRef("sim/cockpit2/annunciators/generator_off[1]");
-  elecDr[ELEC4] = XPlaneRef("sim/cockpit2/annunciators/inverter_off[0]");
+  //elecDr[ELEC1] = XPlaneRef("sim/cockpit2/annunciators/low_voltage");
+  //elecDr[ELEC2] = XPlaneRef("sim/cockpit2/annunciators/generator_off[0]");
+  //elecDr[ELEC3] = XPlaneRef("sim/cockpit2/annunciators/generator_off[1]");
+  //elecDr[ELEC4] = XPlaneRef("sim/cockpit2/annunciators/inverter_off[0]");
 
-  apuDr[APU1] = XPlaneRef("sim/cockpit2/electrical/APU_generator_on");
-  apuDr[APU2] = XPlaneRef("sim/operation/failures/rel_APU_press");
+  //apuDr[APU1] = XPlaneRef("sim/cockpit2/electrical/APU_generator_on");
+  //apuDr[APU2] = XPlaneRef("sim/operation/failures/rel_APU_press");
 
-  ovhtDr[OVHT1] = XPlaneRef("sim/cockpit2/annunciators/hvac");
-  ovhtDr[OVHT2] = XPlaneRef("sim/"); //dummy dataref
+  //ovhtDr[OVHT1] = XPlaneRef("sim/cockpit2/annunciators/hvac");
+  //ovhtDr[OVHT2] = XPlaneRef("sim/"); //dummy dataref
 
-  magHeading = XPlaneRef("sim/cockpit2/gauges/indicators/compass_heading_deg_mag");
+  //magHeading = XPlaneRef("sim/cockpit2/gauges/indicators/compass_heading_deg_mag");
 
   return;
 }
@@ -294,11 +297,11 @@ void loop() {
   // floating point dataref.
   // If the magnetic heading is between 90 and 180, the OVHT System Annunciator
   // will be triggered.
-  if (magHeading > 90 && magHeading < 180) {
-    ovhtDr[OVHT2] = true;
-  } else {
-    ovhtDr[OVHT2] = false;
-  }
+  //if (magHeading > 90 && magHeading < 180) {
+  //  ovhtDr[OVHT2] = true;
+  //} else {
+  //  ovhtDr[OVHT2] = false;
+  //}
 
   ////////////////////////
   // Update input switches
@@ -341,6 +344,5 @@ void loop() {
       sa[i]->setOverride(true);       // override each SA to light up
     }
   }
-
 }
 
