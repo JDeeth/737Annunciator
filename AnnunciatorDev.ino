@@ -167,29 +167,29 @@ void setupDR() {
   // note: the following datarefs have been selected at semi-random.
   // It is not possible for me to check correct behaviour, or spelling
   // as, at the time of writing, I don't have a working X-Plane installation.
-
+  
   // DEBUG
   fltDr[FLT1] = XPlaneRef("sim/cockpit/switches/yaw_damper_on");
   //fltDr[FLT2] = XPlaneRef("sim/cockpit2/annunciators/autopilot_trim_fail");
-
+  
   //irsDr[IRS1] = XPlaneRef("sim/cockpit2/electrical/dc_voltmeter_selection2");
-
+  
   fuelDr[FUEL1] = XPlaneRef("sim/cockpit2/annunciators/fuel_pressure_low[0]");
   fuelDr[FUEL2] = XPlaneRef("sim/cockpit2/annunciators/fuel_pressure_low[1]");
-
+  
   //elecDr[ELEC1] = XPlaneRef("sim/cockpit2/annunciators/low_voltage");
   //elecDr[ELEC2] = XPlaneRef("sim/cockpit2/annunciators/generator_off[0]");
   //elecDr[ELEC3] = XPlaneRef("sim/cockpit2/annunciators/generator_off[1]");
   //elecDr[ELEC4] = XPlaneRef("sim/cockpit2/annunciators/inverter_off[0]");
-
+  
   //apuDr[APU1] = XPlaneRef("sim/cockpit2/electrical/APU_generator_on");
   //apuDr[APU2] = XPlaneRef("sim/operation/failures/rel_APU_press");
-
+  
   //ovhtDr[OVHT1] = XPlaneRef("sim/cockpit2/annunciators/hvac");
   //ovhtDr[OVHT2] = XPlaneRef("sim/"); //dummy dataref
-
+  
   //magHeading = XPlaneRef("sim/cockpit2/gauges/indicators/compass_heading_deg_mag");
-
+  
   return;
 }
 
@@ -250,25 +250,25 @@ void setup() {
   // part of the source file as all the input stuff.
   setupSA();
   setupDR();
-
+  
   // switch input
   for (int i = 0; i < SW_COUNT; ++i) {
     sw[i] = new Bounce (SwPin[i], 5);
     pinMode(SwPin[i], INPUT_PULLUP );
   }
-
+  
   // LED output
   for (int i = 0; i < LED_SA_COUNT; ++i) {
     pinMode(LedPin[i], OUTPUT);
   }
-
+  
   pinMode(mcPin, OUTPUT);
 }
 
 ////////////////////////////////// loop ////////////////////
 void loop() {
   FlightSim.update();
-
+  
   /////////////////////////
   // Assigning values to sub-annc array
   //
@@ -293,29 +293,20 @@ void loop() {
   for (int i = 0; i < OVHT_COUNT; ++i) {
     ovhtAnnc[i] = ovhtDr[i];
   }
-
-  // floating point dataref.
-  // If the magnetic heading is between 90 and 180, the OVHT System Annunciator
-  // will be triggered.
-  //if (magHeading > 90 && magHeading < 180) {
-  //  ovhtDr[OVHT2] = true;
-  //} else {
-  //  ovhtDr[OVHT2] = false;
-  //}
-
+  
   ////////////////////////
   // Update input switches
   for (int i = 0; i < SW_COUNT; ++i) {
     sw[i]->update();
   }
-
+  
   ////////////////////////////////////
   // Update System Annunciators
   //
   for (int i = 0; i < SA_COUNT; ++i) {
     masterCautionLit += sa[i]->checkSubAnncs();
   }
-
+  
   ///////////////////////////////////
   // Input handling
   //
@@ -323,22 +314,19 @@ void loop() {
     for (int i = 0; i < SA_COUNT; ++i) {
       sa[i]->reset();                // reset each System Annc
     }
-    masterCautionLit = true;                    // light the Master Caution
+    masterCautionLit = false;
   }
-  if (sw[SW_MASTER]->risingEdge()) { // when MC is released
-    masterCautionLit = false;                   // extinguish Master Caution
-  }
-
+  
   // Light/extinguish Master Caution
   digitalWrite(mcPin, masterCautionLit);
-
-  if(sw[SW_SIXPACK]->risingEdge()) { //when sixpack released
+  
+  if(sw[SW_SIXPACK]->risingEdge()) { // when sixpack released
     for (int i = 0; i < SA_COUNT; ++i) {
       sa[i]->recall();              // reset all acknowledgements
       sa[i]->setOverride(false);     // clear override
     }
   }
-
+  
   if(sw[SW_SIXPACK]->read() == LOW) { // if sixpack is pressed
     for (int i = 0; i < SA_COUNT; ++i) {
       sa[i]->setOverride(true);       // override each SA to light up
