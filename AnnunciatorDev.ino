@@ -73,6 +73,15 @@ enum SYS_ANNC{
   SA_COUNT
 };
 
+// SystemAnnc LED hardware pins
+const int SALedPin[SA_COUNT] = {
+  5, //FLT CTRL
+  7, //IRS
+  6, //FUEL
+  4, //ELEC
+  2, //APU
+  3};//OVHT
+
 ////////////////////////////
 // Sub-annunciator indexes
 //
@@ -161,8 +170,6 @@ FlightSimInteger elecDr[ELEC_COUNT];
 FlightSimInteger apuDr[APU_COUNT];
 FlightSimInteger ovhtDr[OVHT_COUNT];
 
-//FlightSimFloat magHeading;
-
 void setupDR() {
   // note: the following datarefs have been selected at semi-random.
   // It is not possible for me to check correct behaviour, or spelling
@@ -187,8 +194,6 @@ void setupDR() {
   
   //ovhtDr[OVHT1] = XPlaneRef("sim/cockpit2/annunciators/hvac");
   //ovhtDr[OVHT2] = XPlaneRef("sim/"); //dummy dataref
-  
-  //magHeading = XPlaneRef("sim/cockpit2/gauges/indicators/compass_heading_deg_mag");
   
   return;
 }
@@ -215,31 +220,6 @@ void setupSW() {
   }
 }
 
-///////////////////////// LED outputs /////////////////
-enum LED_NAMES{
-  LED_FLT,
-  LED_IRS,
-  LED_FUEL,
-  LED_ELEC,
-  LED_APU,
-  LED_OVHT, // OVHT/DET
-  //LED_AI, // Anti-Ice
-  //LED_HYD,
-  //LED_DOOR,
-  //LED_ENG,
-  //LED_OH, // Overhead
-  //LED_AC, // Air Conditioning
-  LED_SA_COUNT};
-
-// SystemAnnc LED hardware pins
-const int LedPin[LED_SA_COUNT] = {
-  5, //FLT CTRL
-  7, //IRS
-  6, //FUEL
-  4, //ELEC
-  2, //APU
-  3};//OVHT
-
 // other LED pins
 const int mcPin = 0; //master caution
 
@@ -258,8 +238,8 @@ void setup() {
   }
   
   // LED output
-  for (int i = 0; i < LED_SA_COUNT; ++i) {
-    pinMode(LedPin[i], OUTPUT);
+  for (int i = 0; i < SA_COUNT; ++i) {
+    pinMode(SALedPin[i], OUTPUT);
   }
   
   pinMode(mcPin, OUTPUT);
@@ -331,6 +311,11 @@ void loop() {
     for (int i = 0; i < SA_COUNT; ++i) {
       sa[i]->setOverride(true);       // override each SA to light up
     }
+  }
+  
+  // Light and extinguish SA LEDs based on the state of the SA classes.
+  for (int i = 0; i < SA_COUNT; ++i) {
+    digitalWrite(SALedPin[i], sa[i]->isLit());
   }
 }
 
