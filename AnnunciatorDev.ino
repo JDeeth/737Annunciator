@@ -47,7 +47,7 @@
 #include <Bounce.h>
 #include "SystemAnnc.h"
 
-////////////////////// 
+//////////////////////
 // System Annunciator index
 //
 // A System Annunciator represents a group of sub-annunciators from the
@@ -142,7 +142,7 @@ bool masterCautionLit = false;
 ///////////////////// Switch inputs ////////////////////////
 //
 // Index of hardware input switches.
-// 
+//
 // SW_COUNT is the number of input switches.
 //
 // Be sure to match each SW_PIN entry with a SwPin entry!!
@@ -159,9 +159,9 @@ Bounce * sw[SW_COUNT]; // will be populated with Bounce(SwPin) in setup()
 ///////////////////////// LED outputs /////////////////
 //
 // Index of output LEDs.
-// 
+//
 // LED_SA_MAX is the number of System Annunciator LEDs in the system.
-// 
+//
 // LED_COUNT is the number of LEDs in the system.
 //
 // Be sure to match each LED_PIN entry with a LedPin entry!!
@@ -183,20 +183,20 @@ void setup() {
   // can configure the System Annc array in the same
   // part of the source file as all the input stuff.
   setupSA();
-  
+
   // My hardware-simulated "datarefs"
   for (int i = 0; i < SUB_COUNT; ++i) {
     dr[i] = new Bounce (DRPin[i], 5);
     dr[i]->write(HIGH);
     pinMode(DRPin[i], INPUT_PULLUP );
   }
-  
+
   // switch input
   for (int i = 0; i < SW_COUNT; ++i) {
     sw[i] = new Bounce (SwPin[i], 5);
     pinMode(SwPin[i], INPUT_PULLUP );
   }
-  
+
   // LED output
   for (int i = 0; i < LED_COUNT; ++i) {
     pinMode(LedPin[i], OUTPUT);
@@ -205,7 +205,7 @@ void setup() {
 
 ////////////////////////////////// loop ////////////////////
 void loop() {
-  
+
   /////////////////////////
   // Assigning values to sub-annc array[]
   //
@@ -217,21 +217,21 @@ void loop() {
     dr[i]->update();
     anncArray[i] = !(dr[i]->read());
   }
-  
+
   ////////////////////////
   // Update input switches
   //
   for (int i = 0; i < SW_COUNT; ++i) {
     sw[i]->update();
   }
-  
+
   ////////////////////////////////////
   // Update System Annunciators
   //
   for (int i = 0; i < SA_COUNT; ++i) {
     masterCautionLit += sa[i]->checkSubAnncs();
   }
-  
+
   ///////////////////////////////////
   // Input handling
   //
@@ -239,15 +239,15 @@ void loop() {
     for (int i = 0; i < SA_COUNT; ++i) {
       sa[i]->reset();                // reset each System Annc
     }
-    masterCautionLit = true;                    // light the Master Caution
+    masterCautionLit = false;        // Master Caution is extinguished while
+                                     // reset button is pressed. It will 
+                                     // relight if faults still exist when it
+                                     // is released.
   }
-  if (sw[SW_MASTER]->risingEdge()) { // when MC is released
-    masterCautionLit = false;                   // extinguish Master Caution
-  }
-  
+
   // Light/extinguish Master Caution
   digitalWrite(LedPin[LED_MC], masterCautionLit);
-  
+
   if(sw[SW_SIXPACK]->risingEdge()) { //when sixpack released
     for (int i = 0; i < SA_COUNT; ++i) {
       sa[i]->recall();              // reset all acknowledgements
@@ -256,7 +256,7 @@ void loop() {
       digitalWrite(LedPin[i], LOW); // and extinguish all SAs.
     }                               // They will be relit next loop() if called for.
   }
-  
+
   if(sw[SW_SIXPACK]->read() == LOW) { //if sixpack is pressed
     for (int i = 0; i < LED_SA_MAX; ++i) {
       digitalWrite(LedPin[i], HIGH); //light all the System Annunciators
@@ -266,7 +266,7 @@ void loop() {
       digitalWrite(LedPin[i], sa[i]->isLit()); //light SAs if called for
     }
   }
-  
+
   // voila!
 }
 
